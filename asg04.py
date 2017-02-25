@@ -33,7 +33,8 @@ def main():
   search(x, x_all, mpidt, jobs_list)
 
   print("Completed Search on rank: %d" % rank)
-  if rank == 0:
+  #Change back to rank 0
+  if rank == 4:
     print("All jobs: ")
     print(jobs_list)
   
@@ -42,16 +43,17 @@ def search(x, x_all, mpidt, jobs_list):
   for i in range(500):
     if (i % size) == rank:
       np.put(x,[0], [(i,size,rank)])
-      print("Setting Barrier for rank: %d" % rank)
+      #print("Setting Barrier for rank: %d" % rank)
       comm.Barrier()
-      if rank == 0:
-        print("Gathering")
+      #if rank == 0:
+        #print("Gathering")
       comm.Gatherv([x,mpidt], [x_all,mpidt], root=0) 
       if rank == 0:
         print("Run number: %d" % ((i/size)+1))
-        print(x_all)
-        for job in np.nditer(x_all.T):
+        #print(x_all)
+        for job in np.nditer(x_all):
           jobs_list.append(job)
+          print(job)
 
 
 ##########################
