@@ -12,6 +12,8 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 name = MPI.Get_processor_name()
 
+NUMBER_FILES = 500
+
 #Main#
 def main():
   #Numpy Data Type Create
@@ -30,31 +32,34 @@ def main():
 
   #Searching csv files
   jobs_list = []
-  search(x, x_all, mpidt, jobs_list)
+
+  for i in range(500):
+    search(x, x_all, mpidt, jobs_list)
 
   print("Completed Search on rank: %d" % rank)
   #Change back to rank 0
-  if rank == 4:
-    print("All jobs: ")
-    print(jobs_list)
-  
+  #if rank == 0:
+    #print("All jobs: ")
+    #print(jobs_list)
+
 #Methods#
 def search(x, x_all, mpidt, jobs_list):
-  for i in range(500):
+  excess = NUMBER_FILES % size
+  for i in range(NUMBER_FILES + excess):
+    np.put(x,[0],[(0,0,0)])
     if (i % size) == rank:
-      np.put(x,[0], [(i,size,rank)])
-      #print("Setting Barrier for rank: %d" % rank)
-      comm.Barrier()
+      if i < NUMBER_FILES:
+        np.put(x,[0], [(i,size,rank)])
+      #print("Setting Barrier for rank: %d" % rank) 
       #if rank == 0:
         #print("Gathering")
-      comm.Gatherv([x,mpidt], [x_all,mpidt], root=0) 
+      comm.Gatherv([x,mpidt], [x_all,mpidt], root=0)
       if rank == 0:
         print("Run number: %d" % ((i/size)+1))
-        #print(x_all)
+        print(x_all)
         for job in np.nditer(x_all):
           jobs_list.append(job)
           print(job)
-
 
 ##########################
 if __name__ == "__main__":
