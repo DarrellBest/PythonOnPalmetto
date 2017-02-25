@@ -4,6 +4,7 @@
 
 #Imports#
 from mpi4py import MPI
+import numpy as np
 
 #Globals#
 comm = MPI.COMM_WORLD
@@ -13,33 +14,45 @@ name = MPI.Get_processor_name()
 
 #Main#
 def main():
-  data = None
-  newData = None
-  data = init(data)
-  data = scatter(data)
-  newData = gather(data)
+  #Numpy Data Type Create
+  npydt = np.dtype([('jobID', np.int64, 1), ('starttime', np.int64, 1), ('endtime', np.int64, 1)])
+  #MPI Data Type Create
+  mpidt = MPI.Datatype.Create_struct([1, 1, 1], [0,8,16], [MPI.INT64_T, MPI.INT64_T, MPI.INT64_T])
+  mpidt.Commit()
 
-#Methods#
-def init(data):
+  #Create a local array with numpy of the data type we already created
+  x = np.zeros((1,1), dtype=npydt)
+
   if rank == 0:
-    data = [x for x in range(size)]
-    #data = [(x+1)**x for x in range(size)]
-    print ("we will be scattering: %s" % (data))
+    x_all = np.zeros((size), dtype=x.dtype)
   else:
-    data = None
-  return data
+    x_all = None
 
-def scatter(data):
-  data = comm.scatter(data, root=0)
-  data = rank * rank
-  print ("rank: %s has data: %s" % (rank, data))
-  return data
+  #Searching csv files
+  jobs_list = []
+  search(x, x_all, mpidt, jobs_list)
 
-def gather(data):
-  newData = comm.gather(data, root=0)
+  print("Completed Search on rank: %d" % rank)
   if rank == 0:
-    print("master collected: ", newData)
-    return newData
+    print("All jobs: ")
+    print(jobs_list)
+  
+#Methods#
+def search(x, x_all, mpidt, jobs_list):
+  for i in range(500):
+    if (i % size) == rank:
+      np.put(x,[0], [(i,size,rank)])
+      print("Setting Barrier for rank: %d" % rank)
+      comm.Barrier()
+      if rank == 0:
+        print("Gathering")
+      comm.Gatherv([x,mpidt], [x_all,mpidt], root=0) 
+      if rank == 0:
+        print("Run number: %d" % ((i/size)+1))
+        print(x_all)
+        for job in np.nditer(x_all.T):
+          jobs_list.append(job)
+
 
 ##########################
 if __name__ == "__main__":
